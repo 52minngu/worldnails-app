@@ -1,4 +1,17 @@
 import { services } from "@/lib/services"
+import { getEmployeeById } from "@/lib/employees";
+
+
+function groupByCategory() {
+    const map = new Map<string, typeof services>();
+    for (const s of services) {
+        const arr = map.get(s.category) ?? [];
+        arr.push(s);
+        map.set(s.category, arr);
+    }
+    return map;
+}
+
 export default async function CheckInPage({
     params,
 }: {
@@ -6,14 +19,29 @@ export default async function CheckInPage({
 }) {
     const { employee_id } = await params;
 
+    const employee = getEmployeeById(employee_id);
+    if (!employee || !employee.active) {
+        return (
+            <main className="min-h-screen p-6 max-w-xl mx-auto">
+                <h1 className="text-2xl font bold">WorldNails Check-In</h1>
+                <p className="mt-4 text-gray-700">
+                    This station is unavailable. Please ask the front desk for help.
+                </p>
+            </main>
+        );
+    }
+
+    const grouped = groupByCategory();
+
     return (
         <main className="min-h-screen p-6 max-w-xl mx-auto">
             <h1 className="text-2xl font-bold">WorldNails Check-in</h1>
             <p className="mt-2 text-gray-600">
-                Checking in with:<span className="font-semibold">{employee_id}</span>
+                Checking in with:<span className="font-semibold">{employee.employee_name}</span>
             </p>
 
             <form className="mt-6 space-y-4">
+
                 <div>
                     <label className="block text-sm font-medium"> Your name</label>
                     <input
@@ -32,20 +60,40 @@ export default async function CheckInPage({
                 </div>
 
                 <div>
-                    <label className="Block text-sm font-medium">Services</label>
+                    <label className="block text-sm font-medium">Services</label>
 
                     <div className="mt-2 space-y-2">
-                        {services.map((service) => (
-                            <label key={service.service_id} className="flex items-centerspace-x-2">
-                                <input
-                                    type="checkbox"
-                                    name="service_ids"
-                                    value={service.service_id}
-                                />
-                                <span>
-                                    {service.service_name} (${service.base_price}+)
-                                </span>
-                            </label>
+                        {Array.from(grouped.entries()).map(([category, list]) => (
+                            <details
+                                key={category}
+                                className="rounded-md border bg-white"
+                                open={false}
+                            >
+                                <summary className="curser-pointer select-none px-3 py-2 font-semibold">
+                                    {category} <span className="text-gray-500 front-normal">({list.length})</span>
+                                </summary>
+                                <div className="px-3 pb-3 space-y-2">
+                                    {list.map((service) => (
+                                        <label
+                                            key={service.service_id}
+                                            className="flex items-center gap -2"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                name="service_ids"
+                                                value={service.service_id}
+                                                className="h-4 w-4"
+                                            />
+                                            <span className="flex-1">
+                                                {service.service_name}
+                                            </span>
+                                            <span className="text-sm text-gray-500">
+                                                ${service.base_price}{service.base_price > 0 ? "+" : ""}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </details>
                         ))}
                     </div>
                 </div>
